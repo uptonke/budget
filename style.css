@@ -57,9 +57,9 @@ select {
 
 .topbar-actions {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 10px;
-  min-width: 280px;
+  min-width: 360px;
   align-items: end;
 }
 
@@ -448,4 +448,28 @@ td {
   .ledger-total-row {
     grid-template-columns: minmax(0, 1fr) 112px;
   }
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-actions .btn {
+  flex: 1;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.icon-btn.edit {
+  color: var(--accent);
+}
+
+.hidden {
+  display: none !important;
 }

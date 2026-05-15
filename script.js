@@ -26,6 +26,7 @@ const sampleData = {
 const el = {
   yearSelect: document.getElementById("yearSelect"),
   newYearBtn: document.getElementById("newYearBtn"),
+  deleteYearBtn: document.getElementById("deleteYearBtn"),
   baseBudgetInput: document.getElementById("baseBudgetInput"),
   adjustmentInput: document.getElementById("adjustmentInput"),
   yearNoteInput: document.getElementById("yearNoteInput"),
@@ -46,6 +47,8 @@ const el = {
   planCount: document.getElementById("planCount"),
   planUnitPrice: document.getElementById("planUnitPrice"),
   planNote: document.getElementById("planNote"),
+  planSubmitBtn: document.getElementById("planSubmitBtn"),
+  cancelPlanEditBtn: document.getElementById("cancelPlanEditBtn"),
   planTableBody: document.getElementById("planTableBody"),
   txnForm: document.getElementById("txnForm"),
   txnDate: document.getElementById("txnDate"),
@@ -54,6 +57,8 @@ const el = {
   txnName: document.getElementById("txnName"),
   txnAmount: document.getElementById("txnAmount"),
   txnNote: document.getElementById("txnNote"),
+  txnSubmitBtn: document.getElementById("txnSubmitBtn"),
+  cancelTxnEditBtn: document.getElementById("cancelTxnEditBtn"),
   txnTableBody: document.getElementById("txnTableBody"),
   yearOverviewBody: document.getElementById("yearOverviewBody"),
   exportBtn: document.getElementById("exportBtn"),
@@ -63,6 +68,8 @@ const el = {
 };
 
 let state = loadState();
+let editingPlanId = null;
+let editingTxnId = null;
 normaliseState();
 setTodayDefault();
 render();
@@ -91,6 +98,11 @@ el.newYearBtn.addEventListener("click", () => {
   render();
 });
 
+el.deleteYearBtn.addEventListener("click", () => {
+  const year = getSelectedYear();
+  deleteYear(year);
+});
+
 [el.baseBudgetInput, el.adjustmentInput, el.yearNoteInput].forEach(input => {
   input.addEventListener("input", () => {
     const year = getSelectedYear();
@@ -108,21 +120,34 @@ el.planForm.addEventListener("submit", event => {
   const year = getSelectedYear();
   const count = positiveNumber(el.planCount.value, 1);
   const unitPrice = positiveNumber(el.planUnitPrice.value, 0);
-
-  state.plans.push({
-    id: createId(),
+  const payload = {
     year,
     category: cleanText(el.planCategory.value),
     name: cleanText(el.planName.value),
     count,
     unitPrice,
-    note: cleanText(el.planNote.value),
-    createdAt: new Date().toISOString()
-  });
+    note: cleanText(el.planNote.value)
+  };
+
+  if (editingPlanId) {
+    const index = state.plans.findIndex(item => item.id === editingPlanId);
+    if (index >= 0) {
+      state.plans[index] = {
+        ...state.plans[index],
+        ...payload,
+        updatedAt: new Date().toISOString()
+      };
+    }
+  } else {
+    state.plans.push({
+      id: createId(),
+      ...payload,
+      createdAt: new Date().toISOString()
+    });
+  }
 
   saveState();
-  el.planForm.reset();
-  el.planCount.value = 1;
+  resetPlanForm();
   render();
 });
 
@@ -137,23 +162,44 @@ el.txnForm.addEventListener("submit", event => {
     return;
   }
 
-  state.transactions.push({
-    id: createId(),
+  const payload = {
     year,
     date,
     type: el.txnType.value,
     category: cleanText(el.txnCategory.value),
     name: cleanText(el.txnName.value),
     amount,
-    note: cleanText(el.txnNote.value),
-    createdAt: new Date().toISOString()
-  });
+    note: cleanText(el.txnNote.value)
+  };
+
+  if (editingTxnId) {
+    const index = state.transactions.findIndex(item => item.id === editingTxnId);
+    if (index >= 0) {
+      state.transactions[index] = {
+        ...state.transactions[index],
+        ...payload,
+        updatedAt: new Date().toISOString()
+      };
+    }
+  } else {
+    state.transactions.push({
+      id: createId(),
+      ...payload,
+      createdAt: new Date().toISOString()
+    });
+  }
 
   saveState();
-  const lastDate = el.txnDate.value;
-  el.txnForm.reset();
-  el.txnDate.value = lastDate || new Date().toISOString().slice(0, 10);
+  resetTxnForm(date);
   render();
+});
+
+el.cancelPlanEditBtn.addEventListener("click", () => {
+  resetPlanForm();
+});
+
+el.cancelTxnEditBtn.addEventListener("click", () => {
+  resetTxnForm();
 });
 
 el.addTemplateBtn.addEventListener("click", () => {
@@ -225,6 +271,104 @@ el.resetBtn.addEventListener("click", () => {
   saveState();
   render();
 });
+
+function deleteYear(year) {
+  const years = getAllYears();
+  if (years.length <= 1) {
+    alert("至少需要保留一個年度。");
+    return;
+  }
+
+  const planCount = state.plans.filter(item => Number(item.year) === year).length;
+  const txnCount = state.transactions.filter(item => Number(item.year) === year).length;
+  const message = `確定刪除 ${year} 年？\n會同時刪除：${planCount} 筆年度計畫、${txnCount} 筆實際流水帳。`;
+  if (!confirm(message)) return;
+
+  delete state.years[String(year)];
+  state.plans = state.plans.filter(item => Number(item.year) !== year);
+  state.transactions = state.transactions.filter(item => Number(item.year) !== year);
+  const nextYears = getAllYears().filter(item => item !== year);
+  state.selectedYear = nextYears.length ? nextYears[Math.max(0, nextYears.length - 1)] : new Date().getFullYear();
+  if (!nextYears.length) ensureYear(state.selectedYear);
+  resetPlanForm();
+  resetTxnForm();
+  saveState();
+  render();
+}
+
+function editPlan(id) {
+  const item = state.plans.find(plan => plan.id === id);
+  if (!item) return;
+  editingPlanId = id;
+  state.selectedYear = Number(item.year);
+  ensureYear(state.selectedYear);
+  saveState();
+  render();
+  el.planCategory.value = item.category;
+  el.planName.value = item.name;
+  el.planCount.value = item.count;
+  el.planUnitPrice.value = item.unitPrice;
+  el.planNote.value = item.note || "";
+  el.planSubmitBtn.textContent = "儲存計畫項目";
+  el.cancelPlanEditBtn.classList.remove("hidden");
+  el.planForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function deletePlan(id) {
+  const item = state.plans.find(plan => plan.id === id);
+  if (!item) return;
+  if (!confirm(`確定刪除計畫項目「${item.name}」？`)) return;
+  state.plans = state.plans.filter(plan => plan.id !== id);
+  if (editingPlanId === id) resetPlanForm();
+  saveState();
+  render();
+}
+
+function resetPlanForm() {
+  editingPlanId = null;
+  el.planForm.reset();
+  el.planCount.value = 1;
+  el.planSubmitBtn.textContent = "新增計畫項目";
+  el.cancelPlanEditBtn.classList.add("hidden");
+}
+
+function editTransaction(id) {
+  const item = state.transactions.find(txn => txn.id === id);
+  if (!item) return;
+  editingTxnId = id;
+  state.selectedYear = Number(item.year);
+  ensureYear(state.selectedYear);
+  saveState();
+  render();
+  el.txnDate.value = item.date;
+  el.txnType.value = item.type;
+  el.txnCategory.value = item.category;
+  el.txnName.value = item.name;
+  el.txnAmount.value = item.amount;
+  el.txnNote.value = item.note || "";
+  el.txnSubmitBtn.textContent = "儲存實際紀錄";
+  el.cancelTxnEditBtn.classList.remove("hidden");
+  el.txnForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function deleteTransaction(id) {
+  const item = state.transactions.find(txn => txn.id === id);
+  if (!item) return;
+  if (!confirm(`確定刪除實際紀錄「${item.name}」？`)) return;
+  state.transactions = state.transactions.filter(txn => txn.id !== id);
+  if (editingTxnId === id) resetTxnForm();
+  saveState();
+  render();
+}
+
+function resetTxnForm(keepDate) {
+  editingTxnId = null;
+  el.txnForm.reset();
+  el.txnDate.value = keepDate || new Date().toISOString().slice(0, 10);
+  el.txnType.value = "expense";
+  el.txnSubmitBtn.textContent = "新增實際紀錄";
+  el.cancelTxnEditBtn.classList.add("hidden");
+}
 
 function loadState() {
   try {
@@ -320,13 +464,17 @@ function getSelectedYear() {
 }
 
 function getAllYears() {
-  const yearSet = new Set([Number(state.selectedYear), new Date().getFullYear()]);
+  const yearSet = new Set();
+  if (state.selectedYear) yearSet.add(Number(state.selectedYear));
   Object.keys(state.years || {}).forEach(year => yearSet.add(Number(year)));
   state.plans.forEach(item => yearSet.add(Number(item.year)));
   state.transactions.forEach(item => yearSet.add(Number(item.year)));
-  return [...yearSet]
+
+  const years = [...yearSet]
     .filter(year => Number.isInteger(year) && year >= 1900 && year <= 2200)
     .sort((a, b) => a - b);
+
+  return years.length ? years : [new Date().getFullYear()];
 }
 
 function computeYearSummaries() {
@@ -489,17 +637,22 @@ function renderPlanTable(year) {
         <td>${item.count}</td>
         <td>${formatMoney(item.unitPrice)}</td>
         <td>${formatMoney(subtotal)}</td>
-        <td><button class="icon-btn" data-action="delete-plan" data-id="${item.id}" type="button">刪除</button></td>
+        <td>
+          <div class="action-buttons">
+            <button class="icon-btn edit" data-action="edit-plan" data-id="${item.id}" type="button">編輯</button>
+            <button class="icon-btn" data-action="delete-plan" data-id="${item.id}" type="button">刪除</button>
+          </div>
+        </td>
       </tr>
     `;
   }).join("");
 
+  el.planTableBody.querySelectorAll("[data-action='edit-plan']").forEach(button => {
+    button.addEventListener("click", () => editPlan(button.dataset.id));
+  });
+
   el.planTableBody.querySelectorAll("[data-action='delete-plan']").forEach(button => {
-    button.addEventListener("click", () => {
-      state.plans = state.plans.filter(item => item.id !== button.dataset.id);
-      saveState();
-      render();
-    });
+    button.addEventListener("click", () => deletePlan(button.dataset.id));
   });
 }
 
@@ -522,17 +675,22 @@ function renderTransactionTable(year) {
         <td>${escapeHtml(item.category)}</td>
         <td title="${escapeHtml(item.note || "")}">${escapeHtml(item.name)}</td>
         <td class="${isIncome ? "positive" : ""}">${formatMoney(item.amount)}</td>
-        <td><button class="icon-btn" data-action="delete-txn" data-id="${item.id}" type="button">刪除</button></td>
+        <td>
+          <div class="action-buttons">
+            <button class="icon-btn edit" data-action="edit-txn" data-id="${item.id}" type="button">編輯</button>
+            <button class="icon-btn" data-action="delete-txn" data-id="${item.id}" type="button">刪除</button>
+          </div>
+        </td>
       </tr>
     `;
   }).join("");
 
+  el.txnTableBody.querySelectorAll("[data-action='edit-txn']").forEach(button => {
+    button.addEventListener("click", () => editTransaction(button.dataset.id));
+  });
+
   el.txnTableBody.querySelectorAll("[data-action='delete-txn']").forEach(button => {
-    button.addEventListener("click", () => {
-      state.transactions = state.transactions.filter(item => item.id !== button.dataset.id);
-      saveState();
-      render();
-    });
+    button.addEventListener("click", () => deleteTransaction(button.dataset.id));
   });
 }
 

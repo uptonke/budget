@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="年度娛樂預算 T 字帳：規劃、實際支出、盈餘赤字自動結轉。" />
-  <title>娛樂預算 T 字帳</title>
+  <meta name="description" content="年度娛樂預算：規劃、實際支出、盈餘赤字自動結轉。" />
+  <title>年度娛樂預算</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,13 +12,14 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">Entertainment Ledger</p>
-        <h1>年度娛樂預算 T 字帳</h1>
+        <h1>年度娛樂預算</h1>
         <p class="muted">用實際花費結轉盈餘 / 赤字。資料存在本機瀏覽器，請定期匯出 JSON 備份。</p>
       </div>
       <div class="topbar-actions">
         <label class="compact-label" for="yearSelect">目前年度</label>
         <select id="yearSelect"></select>
         <button id="newYearBtn" class="btn btn-secondary" type="button">新增年度</button>
+        <button id="deleteYearBtn" class="btn btn-danger" type="button">刪除年度</button>
       </div>
     </header>
 
@@ -132,7 +133,10 @@
             <label for="planNote">備註</label>
             <input id="planNote" type="text" placeholder="選填" />
           </div>
-          <button class="btn btn-primary full-span" type="submit">新增計畫項目</button>
+          <div class="form-actions full-span">
+            <button id="planSubmitBtn" class="btn btn-primary" type="submit">新增計畫項目</button>
+            <button id="cancelPlanEditBtn" class="btn btn-secondary hidden" type="button">取消編輯</button>
+          </div>
         </form>
         <div class="table-wrap compact-table">
           <table>
@@ -186,7 +190,10 @@
             <label for="txnNote">備註</label>
             <input id="txnNote" type="text" placeholder="選填" />
           </div>
-          <button class="btn btn-primary full-span" type="submit">新增實際紀錄</button>
+          <div class="form-actions full-span">
+            <button id="txnSubmitBtn" class="btn btn-primary" type="submit">新增實際紀錄</button>
+            <button id="cancelTxnEditBtn" class="btn btn-secondary hidden" type="button">取消編輯</button>
+          </div>
         </form>
         <div class="table-wrap compact-table">
           <table>

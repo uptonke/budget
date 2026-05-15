@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="年度娛樂預算：規劃、實際支出、盈餘赤字自動結轉。" />
+  <meta name="description" content="年度娛樂預算：規劃、實際支出、分類上限、超支警示、盈餘赤字自動結轉。" />
   <title>年度娛樂預算</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -11,9 +11,9 @@
   <main class="app-shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Entertainment Ledger</p>
+        <p class="eyebrow">Entertainment Budget Ledger</p>
         <h1>年度娛樂預算</h1>
-        <p class="muted">用實際花費結轉盈餘 / 赤字。資料存在本機瀏覽器，請定期匯出 JSON 備份。</p>
+        <p class="muted">以實際花費結轉盈餘 / 赤字，並用分類上限、進度條與警示控制爆預算風險。</p>
       </div>
       <div class="topbar-actions">
         <label class="compact-label" for="yearSelect">目前年度</label>
@@ -23,11 +23,11 @@
       </div>
     </header>
 
-    <section class="control-panel panel">
+    <section class="panel control-panel">
       <div class="section-title">
         <div>
           <h2>年度設定</h2>
-          <p class="muted">基礎預算與年度調整會進入資金來源；上年結轉由系統依實際花費自動計算。</p>
+          <p class="muted">上年結轉由系統依實際花費自動計算；赤字也會帶到下一年。</p>
         </div>
       </div>
       <div class="settings-grid">
@@ -70,28 +70,44 @@
       <article class="summary-card emphasis">
         <p class="label">期末結餘 / 赤字</p>
         <strong id="endingBalance">$0</strong>
-        <span class="hint">會自動結轉到下一年</span>
+        <span class="hint">依實際花費結算</span>
       </article>
+      <article class="summary-card preview-card">
+        <p class="label">年度結轉預覽</p>
+        <strong id="carryoverPreview">$0</strong>
+        <span id="carryoverPreviewText" class="hint">若現在結算，下一年將帶入此金額</span>
+      </article>
+    </section>
+
+    <section id="warningPanel" class="panel warning-panel">
+      <div class="section-title row-title">
+        <div>
+          <h2>超支警示</h2>
+          <p class="muted">依可用總額、計畫、實際花費與分類上限自動判斷。</p>
+        </div>
+        <span id="warningStatus" class="status-pill">安全</span>
+      </div>
+      <div id="warningList" class="warning-list"></div>
     </section>
 
     <section class="panel">
       <div class="section-title">
         <div>
-          <h2>會計式 T 字帳</h2>
-          <p class="muted">右側是資金來源，左側是用途；期末結餘或赤字用來讓兩邊平衡。</p>
+          <h2>年度娛樂預算</h2>
+          <p class="muted">左側為用途，右側為來源；期末結餘或赤字用來讓兩邊平衡。</p>
         </div>
       </div>
       <div class="ledger-grid">
         <div class="ledger-side debit">
           <div class="ledger-heading">
-            <span>Debit 用途</span>
+            <span>用途</span>
             <span>金額</span>
           </div>
           <div id="debitRows" class="ledger-rows"></div>
         </div>
         <div class="ledger-side credit">
           <div class="ledger-heading">
-            <span>Credit 來源</span>
+            <span>來源</span>
             <span>金額</span>
           </div>
           <div id="creditRows" class="ledger-rows"></div>
@@ -103,14 +119,66 @@
       </div>
     </section>
 
+    <section class="panel">
+      <div class="section-title row-title">
+        <div>
+          <h2>分類預算上限與差異分析</h2>
+          <p class="muted">設定每個分類的年度上限，查看使用率、超支、計畫與實際差異。</p>
+        </div>
+        <button id="buildBudgetsFromPlanBtn" class="btn btn-secondary" type="button">用年度計畫建立上限</button>
+      </div>
+
+      <form id="budgetLimitForm" class="form-grid limit-form">
+        <div>
+          <label for="limitCategory">分類</label>
+          <input id="limitCategory" list="categoryList" type="text" placeholder="例如：餐飲" required />
+        </div>
+        <div>
+          <label for="limitAmount">年度上限</label>
+          <input id="limitAmount" type="number" min="0" step="100" required />
+        </div>
+        <div>
+          <label for="limitNote">備註</label>
+          <input id="limitNote" type="text" placeholder="選填" />
+        </div>
+        <div class="form-actions align-end">
+          <button id="limitSubmitBtn" class="btn btn-primary" type="submit">新增 / 更新上限</button>
+          <button id="cancelLimitEditBtn" class="btn btn-secondary hidden" type="button">取消編輯</button>
+        </div>
+      </form>
+
+      <div id="categoryProgressGrid" class="category-progress-grid"></div>
+
+      <div class="table-wrap variance-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>分類</th>
+              <th>上限</th>
+              <th>計畫</th>
+              <th>實際</th>
+              <th>實際 - 計畫</th>
+              <th>上限剩餘</th>
+              <th>狀態</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="varianceTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="two-column">
       <article class="panel">
         <div class="section-title row-title">
           <div>
             <h2>年度計畫</h2>
-            <p class="muted">用來做預算配置，不影響結轉；結轉只看實際流水帳。</p>
+            <p class="muted">用來做預算配置；結轉只看實際流水帳。</p>
           </div>
-          <button id="addTemplateBtn" class="btn btn-secondary" type="button">加入基準版</button>
+          <div class="button-cluster">
+            <button id="copyPreviousPlanBtn" class="btn btn-secondary" type="button">複製上一年度計畫</button>
+            <button id="addTemplateBtn" class="btn btn-secondary" type="button">加入基準版</button>
+          </div>
         </div>
         <form id="planForm" class="form-grid">
           <div>
@@ -159,7 +227,7 @@
         <div class="section-title">
           <div>
             <h2>實際流水帳</h2>
-            <p class="muted">支出會扣可用額；退款 / 收入會增加可用額。</p>
+            <p class="muted">支出扣可用額；退款 / 收入增加可用額。</p>
           </div>
         </div>
         <form id="txnForm" class="form-grid">
@@ -217,7 +285,7 @@
       <div class="section-title row-title">
         <div>
           <h2>年度總覽</h2>
-          <p class="muted">用實際花費逐年結轉；赤字不會被洗掉。</p>
+          <p class="muted">依實際花費逐年結轉；赤字不會被洗掉。</p>
         </div>
       </div>
       <div class="table-wrap">
@@ -231,6 +299,7 @@
               <th>實際收入</th>
               <th>實際支出</th>
               <th>期末</th>
+              <th>下一年結轉</th>
               <th>備註</th>
             </tr>
           </thead>
@@ -243,14 +312,13 @@
       <div class="section-title">
         <div>
           <h2>資料工具</h2>
-          <p class="muted">GitHub Pages 無法直接寫回 repo；請用 JSON 匯出 / 匯入備份。</p>
+          <p class="muted">GitHub Pages 無法直接寫回 repo；資料存在瀏覽器 localStorage，請定期匯出 JSON 備份。</p>
         </div>
       </div>
       <div class="tools-grid">
         <button id="exportBtn" class="btn btn-secondary" type="button">匯出 JSON</button>
         <label class="btn btn-secondary file-label" for="importFile">匯入 JSON</label>
         <input id="importFile" class="visually-hidden" type="file" accept="application/json,.json" />
-        <button id="downloadSampleBtn" class="btn btn-secondary" type="button">下載範例資料</button>
         <button id="resetBtn" class="btn btn-danger" type="button">重設全部資料</button>
       </div>
     </section>

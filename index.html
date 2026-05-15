@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="年度娛樂預算 T 字帳：規劃、實際支出、盈餘赤字自動結轉。" />
+  <title>娛樂預算 T 字帳</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Entertainment Ledger</p>
+        <h1>年度娛樂預算 T 字帳</h1>
+        <p class="muted">用實際花費結轉盈餘 / 赤字。資料存在本機瀏覽器，請定期匯出 JSON 備份。</p>
+      </div>
+      <div class="topbar-actions">
+        <label class="compact-label" for="yearSelect">目前年度</label>
+        <select id="yearSelect"></select>
+        <button id="newYearBtn" class="btn btn-secondary" type="button">新增年度</button>
+      </div>
+    </header>
+
+    <section class="control-panel panel">
+      <div class="section-title">
+        <div>
+          <h2>年度設定</h2>
+          <p class="muted">基礎預算與年度調整會進入資金來源；上年結轉由系統依實際花費自動計算。</p>
+        </div>
+      </div>
+      <div class="settings-grid">
+        <div>
+          <label for="baseBudgetInput">年度基礎預算（TWD）</label>
+          <input id="baseBudgetInput" type="number" min="0" step="1000" />
+        </div>
+        <div>
+          <label for="adjustmentInput">年度調整（可正可負）</label>
+          <input id="adjustmentInput" type="number" step="100" />
+        </div>
+        <div>
+          <label for="yearNoteInput">年度備註</label>
+          <input id="yearNoteInput" type="text" placeholder="例如：2028 澳洲年、2032 肯亞年" />
+        </div>
+      </div>
+    </section>
+
+    <section class="summary-grid" aria-label="年度摘要">
+      <article class="summary-card">
+        <p class="label">上年結轉</p>
+        <strong id="carryoverAmount">$0</strong>
+        <span class="hint">盈餘為正，赤字為負</span>
+      </article>
+      <article class="summary-card">
+        <p class="label">可用總額</p>
+        <strong id="availableAmount">$0</strong>
+        <span class="hint">基礎預算 + 結轉 + 調整 + 收入</span>
+      </article>
+      <article class="summary-card">
+        <p class="label">計畫花費</p>
+        <strong id="plannedAmount">$0</strong>
+        <span id="plannedVsAvailable" class="hint">佔可用總額 0%</span>
+      </article>
+      <article class="summary-card">
+        <p class="label">實際花費</p>
+        <strong id="actualExpenseAmount">$0</strong>
+        <span id="actualVsAvailable" class="hint">佔可用總額 0%</span>
+      </article>
+      <article class="summary-card emphasis">
+        <p class="label">期末結餘 / 赤字</p>
+        <strong id="endingBalance">$0</strong>
+        <span class="hint">會自動結轉到下一年</span>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <div>
+          <h2>會計式 T 字帳</h2>
+          <p class="muted">右側是資金來源，左側是用途；期末結餘或赤字用來讓兩邊平衡。</p>
+        </div>
+      </div>
+      <div class="ledger-grid">
+        <div class="ledger-side debit">
+          <div class="ledger-heading">
+            <span>Debit 用途</span>
+            <span>金額</span>
+          </div>
+          <div id="debitRows" class="ledger-rows"></div>
+        </div>
+        <div class="ledger-side credit">
+          <div class="ledger-heading">
+            <span>Credit 來源</span>
+            <span>金額</span>
+          </div>
+          <div id="creditRows" class="ledger-rows"></div>
+        </div>
+      </div>
+      <div class="ledger-total-row">
+        <span>平衡後合計</span>
+        <strong id="balancedTotal">$0</strong>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <article class="panel">
+        <div class="section-title row-title">
+          <div>
+            <h2>年度計畫</h2>
+            <p class="muted">用來做預算配置，不影響結轉；結轉只看實際流水帳。</p>
+          </div>
+          <button id="addTemplateBtn" class="btn btn-secondary" type="button">加入基準版</button>
+        </div>
+        <form id="planForm" class="form-grid">
+          <div>
+            <label for="planCategory">分類</label>
+            <input id="planCategory" list="categoryList" type="text" placeholder="例如：餐飲" required />
+          </div>
+          <div>
+            <label for="planName">項目</label>
+            <input id="planName" type="text" placeholder="例如：fine dining / omakase" required />
+          </div>
+          <div>
+            <label for="planCount">次數</label>
+            <input id="planCount" type="number" min="1" step="1" value="1" required />
+          </div>
+          <div>
+            <label for="planUnitPrice">單價</label>
+            <input id="planUnitPrice" type="number" min="0" step="100" required />
+          </div>
+          <div class="full-span">
+            <label for="planNote">備註</label>
+            <input id="planNote" type="text" placeholder="選填" />
+          </div>
+          <button class="btn btn-primary full-span" type="submit">新增計畫項目</button>
+        </form>
+        <div class="table-wrap compact-table">
+          <table>
+            <thead>
+              <tr>
+                <th>分類</th>
+                <th>項目</th>
+                <th>次數</th>
+                <th>單價</th>
+                <th>小計</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="planTableBody"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="section-title">
+          <div>
+            <h2>實際流水帳</h2>
+            <p class="muted">支出會扣可用額；退款 / 收入會增加可用額。</p>
+          </div>
+        </div>
+        <form id="txnForm" class="form-grid">
+          <div>
+            <label for="txnDate">日期</label>
+            <input id="txnDate" type="date" required />
+          </div>
+          <div>
+            <label for="txnType">類型</label>
+            <select id="txnType" required>
+              <option value="expense">支出</option>
+              <option value="income">退款 / 收入</option>
+            </select>
+          </div>
+          <div>
+            <label for="txnCategory">分類</label>
+            <input id="txnCategory" list="categoryList" type="text" placeholder="例如：遠程出國" required />
+          </div>
+          <div>
+            <label for="txnName">項目</label>
+            <input id="txnName" type="text" placeholder="例如：機票、Bluenote、曼谷" required />
+          </div>
+          <div>
+            <label for="txnAmount">金額</label>
+            <input id="txnAmount" type="number" min="0" step="1" required />
+          </div>
+          <div>
+            <label for="txnNote">備註</label>
+            <input id="txnNote" type="text" placeholder="選填" />
+          </div>
+          <button class="btn btn-primary full-span" type="submit">新增實際紀錄</button>
+        </form>
+        <div class="table-wrap compact-table">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>類型</th>
+                <th>分類</th>
+                <th>項目</th>
+                <th>金額</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="txnTableBody"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="section-title row-title">
+        <div>
+          <h2>年度總覽</h2>
+          <p class="muted">用實際花費逐年結轉；赤字不會被洗掉。</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>年度</th>
+              <th>基礎預算</th>
+              <th>上年結轉</th>
+              <th>調整</th>
+              <th>實際收入</th>
+              <th>實際支出</th>
+              <th>期末</th>
+              <th>備註</th>
+            </tr>
+          </thead>
+          <tbody id="yearOverviewBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel tools-panel">
+      <div class="section-title">
+        <div>
+          <h2>資料工具</h2>
+          <p class="muted">GitHub Pages 無法直接寫回 repo；請用 JSON 匯出 / 匯入備份。</p>
+        </div>
+      </div>
+      <div class="tools-grid">
+        <button id="exportBtn" class="btn btn-secondary" type="button">匯出 JSON</button>
+        <label class="btn btn-secondary file-label" for="importFile">匯入 JSON</label>
+        <input id="importFile" class="visually-hidden" type="file" accept="application/json,.json" />
+        <button id="downloadSampleBtn" class="btn btn-secondary" type="button">下載範例資料</button>
+        <button id="resetBtn" class="btn btn-danger" type="button">重設全部資料</button>
+      </div>
+    </section>
+  </main>
+
+  <datalist id="categoryList">
+    <option value="喜劇"></option>
+    <option value="爵士"></option>
+    <option value="餐飲"></option>
+    <option value="遠程出國"></option>
+    <option value="東南亞"></option>
+    <option value="其他"></option>
+  </datalist>
+
+  <script src="script.js"></script>
+</body>
+</html>

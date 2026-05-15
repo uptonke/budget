@@ -1,0 +1,114 @@
+{
+  "version": 2,
+  "selectedYear": 2028,
+  "years": {
+    "2028": {
+      "baseBudget": 100000,
+      "adjustment": 0,
+      "note": "基準版：澳洲年"
+    },
+    "2029": {
+      "baseBudget": 100000,
+      "adjustment": 0,
+      "note": "下一年會自動吃 2028 結轉"
+    }
+  },
+  "plans": [
+    {
+      "id": "sample-plan-1",
+      "year": 2028,
+      "category": "喜劇",
+      "name": "23 全英文喜劇",
+      "count": 12,
+      "unitPrice": 600,
+      "note": "每月一次",
+      "createdAt": "2028-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "sample-plan-2",
+      "year": 2028,
+      "category": "爵士",
+      "name": "Bluenote / 爵士酒吧",
+      "count": 12,
+      "unitPrice": 550,
+      "note": "每月一次",
+      "createdAt": "2028-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "sample-plan-3",
+      "year": 2028,
+      "category": "餐飲",
+      "name": "fine dining / omakase",
+      "count": 4,
+      "unitPrice": 4000,
+      "note": "一年四次",
+      "createdAt": "2028-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "sample-plan-4",
+      "year": 2028,
+      "category": "遠程出國",
+      "name": "過年遠程出國",
+      "count": 1,
+      "unitPrice": 55000,
+      "note": "基準版遠程預算",
+      "createdAt": "2028-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "sample-plan-5",
+      "year": 2028,
+      "category": "東南亞",
+      "name": "東南亞連假",
+      "count": 1,
+      "unitPrice": 12500,
+      "note": "10,000～15,000 中位數",
+      "createdAt": "2028-01-01T00:00:00.000Z"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "sample-txn-1",
+      "year": 2028,
+      "date": "2028-01-15",
+      "type": "expense",
+      "category": "喜劇",
+      "name": "23 全英文喜劇",
+      "amount": 600,
+      "note": "範例",
+      "createdAt": "2028-01-15T00:00:00.000Z"
+    },
+    {
+      "id": "sample-txn-2",
+      "year": 2028,
+      "date": "2028-02-10",
+      "type": "expense",
+      "category": "爵士",
+      "name": "Bluenote",
+      "amount": 550,
+      "note": "範例",
+      "createdAt": "2028-02-10T00:00:00.000Z"
+    },
+    {
+      "id": "sample-txn-3",
+      "year": 2028,
+      "date": "2028-03-20",
+      "type": "expense",
+      "category": "餐飲",
+      "name": "Omakase",
+      "amount": 4200,
+      "note": "範例",
+      "createdAt": "2028-03-20T00:00:00.000Z"
+    },
+    {
+      "id": "sample-txn-4",
+      "year": 2028,
+      "date": "2028-04-01",
+      "type": "income",
+      "category": "退款",
+      "name": "旅館取消退款",
+      "amount": 1000,
+      "note": "範例",
+      "createdAt": "2028-04-01T00:00:00.000Z"
+    }
+  ]
+}
